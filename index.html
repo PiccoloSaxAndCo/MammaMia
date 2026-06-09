@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chor-Probe</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.track {
+    margin: 15px 0;
+}
+
+.track label {
+    display: inline-block;
+    width: 100px;
+    font-weight: bold;
+}
+
+input[type=range] {
+    width: 300px;
+    vertical-align: middle;
+}
+
+.controls {
+    text-align: center;
+    margin: 30px 0;
+}
+
+button {
+    font-size: 18px;
+    padding: 10px 20px;
+    margin: 0 10px;
+}
+
+.status {
+    text-align: center;
+    color: #666;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Chor-Probe</h1>
+
+<div class="controls">
+    <button id="playBtn">▶ Start</button>
+    <button id="stopBtn">■ Stop</button>
+</div>
+
+<div class="track">
+    <label>Referenz</label>
+    <input type="range" min="0" max="100" value="80" id="vol_ref">
+</div>
+
+<div class="track">
+    <label>Sopran</label>
+    <input type="range" min="0" max="100" value="100" id="vol_sop">
+</div>
+
+<div class="track">
+    <label>Alt</label>
+    <input type="range" min="0" max="100" value="100" id="vol_alt">
+</div>
+
+<div class="track">
+    <label>Tenor</label>
+    <input type="range" min="0" max="100" value="100" id="vol_ten">
+</div>
+
+<div class="track">
+    <label>Bass</label>
+    <input type="range" min="0" max="100" value="100" id="vol_bas">
+</div>
+
+<div class="status">
+    Alle Spuren laufen synchron.
+</div>
+
+<script>
+const tracks = {
+    ref: new Audio("MammaMia Ref Only.mp3"),
+    sop: new Audio("MammaMia Sopran Only.mp3"),
+    alt: new Audio("MammaMia Alt Only.mp3"),
+    ten: new Audio("MammaMia Tenor Only.mp3"),
+    bas: new Audio("MammaMia Bass Only.mp3")
+};
+
+Object.values(tracks).forEach(audio => {
+    audio.preload = "auto";
+});
+
+function syncPlay() {
+    const pos = tracks.ref.currentTime;
+
+    Object.values(tracks).forEach(audio => {
+        audio.currentTime = pos;
+    });
+
+    Promise.all(
+        Object.values(tracks).map(a => a.play())
+    );
+}
+
+function stopAll() {
+    Object.values(tracks).forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+    });
+}
+
+document.getElementById("playBtn").onclick = syncPlay;
+document.getElementById("stopBtn").onclick = stopAll;
+
+document.getElementById("vol_ref").oninput =
+e => tracks.ref.volume = e.target.value / 100;
+
+document.getElementById("vol_sop").oninput =
+e => tracks.sop.volume = e.target.value / 100;
+
+document.getElementById("vol_alt").oninput =
+e => tracks.alt.volume = e.target.value / 100;
+
+document.getElementById("vol_ten").oninput =
+e => tracks.ten.volume = e.target.value / 100;
+
+document.getElementById("vol_bas").oninput =
+e => tracks.bas.volume = e.target.value / 100;
+
+// Startwerte
+tracks.ref.volume = 0.8;
+tracks.sop.volume = 1;
+tracks.alt.volume = 1;
+tracks.ten.volume = 1;
+tracks.bas.volume = 1;
+</script>
+
+</body>
+</html>
