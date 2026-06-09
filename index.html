@@ -3,148 +3,272 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chor-Probe</title>
+<title>Mamma Mia 2026 PRO</title>
 
 <style>
 body {
-    font-family: Arial, sans-serif;
-    max-width: 700px;
-    margin: 40px auto;
-    padding: 20px;
+  font-family: Arial;
+  max-width: 850px;
+  margin: auto;
+  padding: 15px;
 }
 
-h1 {
-    text-align: center;
-}
-
-.track {
-    margin: 15px 0;
-}
-
-.track label {
-    display: inline-block;
-    width: 100px;
-    font-weight: bold;
-}
-
-input[type=range] {
-    width: 300px;
-    vertical-align: middle;
-}
+h1 { text-align:center; }
 
 .controls {
-    text-align: center;
-    margin: 30px 0;
+  text-align:center;
+  margin-bottom:10px;
 }
 
 button {
-    font-size: 18px;
-    padding: 10px 20px;
-    margin: 0 10px;
+  padding:10px;
+  margin:5px;
+  font-size:16px;
 }
 
-.status {
-    text-align: center;
-    color: #666;
-    margin-top: 10px;
+.track {
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:10px;
+  margin:10px 0;
+}
+
+.row {
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+label {
+  width:90px;
+  font-weight:bold;
+}
+
+input[type=range] {
+  flex:1;
+}
+
+.muteBtn {
+  padding:5px 8px;
+  font-size:12px;
+  border-radius:5px;
+  border:1px solid #ccc;
+  cursor:pointer;
+}
+
+.muteBtn.active {
+  background:#e74c3c;
+  color:white;
+  border-color:#e74c3c;
+}
+
+#seek {
+  width:100%;
+}
+
+.time {
+  text-align:center;
+  font-family: monospace;
+  margin-top:5px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>Chor-Probe</h1>
+<h1>Mamma Mia 2026 PRO</h1>
 
 <div class="controls">
-    <button id="playBtn">▶ Start</button>
-    <button id="stopBtn">■ Stop</button>
+  <button id="play">▶ Play</button>
+  <button id="pause">⏸ Pause</button>
+  <button id="stop">■ Stop</button>
 </div>
 
-<div class="track">
-    <label>Referenz</label>
-    <input type="range" min="0" max="100" value="80" id="vol_ref">
-</div>
+<input type="range" id="seek" min="0" max="1000" value="0">
+<div class="time" id="time">0:00 / 0:00</div>
 
-<div class="track">
-    <label>Sopran</label>
-    <input type="range" min="0" max="100" value="100" id="vol_sop">
-</div>
-
-<div class="track">
-    <label>Alt</label>
-    <input type="range" min="0" max="100" value="100" id="vol_alt">
-</div>
-
-<div class="track">
-    <label>Tenor</label>
-    <input type="range" min="0" max="100" value="100" id="vol_ten">
-</div>
-
-<div class="track">
-    <label>Bass</label>
-    <input type="range" min="0" max="100" value="100" id="vol_bas">
-</div>
-
-<div class="status">
-    Alle Spuren laufen synchron.
-</div>
+<div id="tracks"></div>
 
 <script>
-const tracks = {
-    ref: new Audio("MammaMia Ref Only.mp3"),
-    sop: new Audio("MammaMia Sopran Only.mp3"),
-    alt: new Audio("MammaMia Alt Only.mp3"),
-    ten: new Audio("MammaMia Tenor Only.mp3"),
-    bas: new Audio("MammaMia Bass Only.mp3")
+const files = {
+  ref: "referenz.mp3",
+  sop: "sopran.mp3",
+  alt: "alt.mp3",
+  ten: "tenor.mp3",
+  bas: "bass.mp3"
 };
 
-Object.values(tracks).forEach(audio => {
-    audio.preload = "auto";
-});
+const names = {
+  ref: "Ref",
+  sop: "Sop",
+  alt: "Alt",
+  ten: "Ten",
+  bas: "Bass"
+};
 
-function syncPlay() {
-    const pos = tracks.ref.currentTime;
+// ---------- AUDIO ENGINE ----------
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-    Object.values(tracks).forEach(audio => {
-        audio.currentTime = pos;
-    });
+let buffers = {};
+let gainNodes = {};
+let sources = {};
+let startTime = 0;
+let offset = 0;
+let playing = false;
 
-    Promise.all(
-        Object.values(tracks).map(a => a.play())
-    );
+let state = {};
+let duration = 0;
+
+// ---------- UI ----------
+const container = document.getElementById("tracks");
+
+for (let k in files) {
+  state[k] = {
+    volume: 0.8,
+    mute: false
+  };
+
+  const div = document.createElement("div");
+  div.className = "track";
+
+  div.innerHTML = `
+    <div class="row">
+      <label>${names[k]}</label>
+
+      <input type="range" min="0" max="1" step="0.01" value="0.8" id="vol_${k}">
+
+      <button class="muteBtn" id="mute_${k}">Mute</button>
+    </div>
+  `;
+
+  container.appendChild(div);
 }
 
+// ---------- LOAD AUDIO ----------
+async function loadAll() {
+  for (let k in files) {
+    const res = await fetch(files[k]);
+    const arr = await res.arrayBuffer();
+    buffers[k] = await ctx.decodeAudioData(arr);
+  }
+
+  duration = buffers.ref.duration;
+}
+
+// ---------- PLAY ENGINE ----------
+function playAll() {
+  stopAll();
+
+  startTime = ctx.currentTime - offset;
+
+  for (let k in buffers) {
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+
+    source.buffer = buffers[k];
+
+    gain.gain.value = state[k].mute ? 0 : state[k].volume;
+
+    source.connect(gain).connect(ctx.destination);
+
+    source.start(0, offset);
+
+    sources[k] = source;
+    gainNodes[k] = gain;
+  }
+
+  playing = true;
+  updateUI();
+}
+
+// ---------- STOP ----------
 function stopAll() {
-    Object.values(tracks).forEach(audio => {
-        audio.pause();
-        audio.currentTime = 0;
-    });
+  for (let k in sources) {
+    try { sources[k].stop(); } catch(e) {}
+  }
+  sources = {};
+  playing = false;
 }
 
-document.getElementById("playBtn").onclick = syncPlay;
-document.getElementById("stopBtn").onclick = stopAll;
+// ---------- PAUSE ----------
+function pauseAll() {
+  offset = ctx.currentTime - startTime;
+  stopAll();
+}
 
-document.getElementById("vol_ref").oninput =
-e => tracks.ref.volume = e.target.value / 100;
+// ---------- APPLY MIX ----------
+function applyMix() {
+  for (let k in gainNodes) {
+    if (!gainNodes[k]) continue;
 
-document.getElementById("vol_sop").oninput =
-e => tracks.sop.volume = e.target.value / 100;
+    gainNodes[k].gain.value =
+      state[k].mute ? 0 : state[k].volume;
+  }
+}
 
-document.getElementById("vol_alt").oninput =
-e => tracks.alt.volume = e.target.value / 100;
+// ---------- UI UPDATE ----------
+function updateUI() {
+  if (!playing) return;
 
-document.getElementById("vol_ten").oninput =
-e => tracks.ten.volume = e.target.value / 100;
+  const t = ctx.currentTime - startTime;
 
-document.getElementById("vol_bas").oninput =
-e => tracks.bas.volume = e.target.value / 100;
+  document.getElementById("seek").value =
+    (t / duration) * 1000;
 
-// Startwerte
-tracks.ref.volume = 0.8;
-tracks.sop.volume = 1;
-tracks.alt.volume = 1;
-tracks.ten.volume = 1;
-tracks.bas.volume = 1;
+  document.getElementById("time").innerText =
+    format(t) + " / " + format(duration);
+
+  requestAnimationFrame(updateUI);
+}
+
+// ---------- FORMAT ----------
+function format(t) {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60).toString().padStart(2,"0");
+  return `${m}:${s}`;
+}
+
+// ---------- SEEK ----------
+document.getElementById("seek").oninput = (e) => {
+  offset = (e.target.value / 1000) * duration;
+
+  if (playing) {
+    playAll();
+  }
+};
+
+// ---------- EVENTS ----------
+document.getElementById("play").onclick = async () => {
+  await ctx.resume();
+  await loadAll();
+  playAll();
+};
+
+document.getElementById("pause").onclick = pauseAll;
+
+document.getElementById("stop").onclick = () => {
+  offset = 0;
+  stopAll();
+  document.getElementById("seek").value = 0;
+  document.getElementById("time").innerText = "0:00 / 0:00";
+};
+
+// ---------- CONTROLS ----------
+setTimeout(() => {
+  for (let k in files) {
+
+    document.getElementById("vol_" + k).oninput = (e) => {
+      state[k].volume = parseFloat(e.target.value);
+      applyMix();
+    };
+
+    document.getElementById("mute_" + k).onclick = (e) => {
+      state[k].mute = !state[k].mute;
+      e.target.classList.toggle("active");
+      applyMix();
+    };
+  }
+}, 300);
 </script>
 
 </body>
