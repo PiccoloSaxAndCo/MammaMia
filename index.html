@@ -3,207 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mamma Mia Player</title>
+<title>Chor-Probe</title>
 
 <style>
 body {
     font-family: Arial, sans-serif;
-    max-width: 800px;
-    margin: auto;
-    padding: 15px;
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 20px;
 }
 
 h1 {
     text-align: center;
 }
 
-.controls {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 10px 0;
-}
-
-button {
-    font-size: 16px;
-    padding: 10px;
-}
-
 .track {
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 10px;
-    margin: 10px 0;
+    margin: 15px 0;
 }
 
-.row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-}
-
-label {
+.track label {
+    display: inline-block;
+    width: 100px;
     font-weight: bold;
-    width: 90px;
 }
 
 input[type=range] {
-    flex: 1;
+    width: 300px;
+    vertical-align: middle;
+}
+
+.controls {
+    text-align: center;
+    margin: 30px 0;
+}
+
+button {
+    font-size: 18px;
+    padding: 10px 20px;
     margin: 0 10px;
 }
 
-.smallbtn {
-    padding: 5px 8px;
-    font-size: 12px;
-}
-
-#seek {
-    width: 100%;
+.status {
+    text-align: center;
+    color: #666;
+    margin-top: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>Mamma Mia Player</h1>
+<h1>Chor-Probe</h1>
 
 <div class="controls">
-    <button id="play">▶ Play</button>
-    <button id="pause">⏸ Pause</button>
-    <button id="stop">■ Stop</button>
+    <button id="playBtn">▶ Start</button>
+    <button id="stopBtn">■ Stop</button>
 </div>
 
-<input type="range" id="seek" min="0" max="1000" value="0">
+<div class="track">
+    <label>Referenz</label>
+    <input type="range" min="0" max="100" value="80" id="vol_ref">
+</div>
 
-<div id="tracks"></div>
+<div class="track">
+    <label>Sopran</label>
+    <input type="range" min="0" max="100" value="100" id="vol_sop">
+</div>
+
+<div class="track">
+    <label>Alt</label>
+    <input type="range" min="0" max="100" value="100" id="vol_alt">
+</div>
+
+<div class="track">
+    <label>Tenor</label>
+    <input type="range" min="0" max="100" value="100" id="vol_ten">
+</div>
+
+<div class="track">
+    <label>Bass</label>
+    <input type="range" min="0" max="100" value="100" id="vol_bas">
+</div>
+
+<div class="status">
+    Alle Spuren laufen synchron.
+</div>
 
 <script>
-const names = {
-    ref: "Referenz",
-    sop: "Sopran",
-    alt: "Alt",
-    ten: "Tenor",
-    bas: "Bass"
+const tracks = {
+    ref: new Audio("referenz.mp3"),
+    sop: new Audio("sopran.mp3"),
+    alt: new Audio("alt.mp3"),
+    ten: new Audio("tenor.mp3"),
+    bas: new Audio("bass.mp3")
 };
 
-const files = {
-    ref: "referenz.mp3",
-    sop: "sopran.mp3",
-    alt: "alt.mp3",
-    ten: "tenor.mp3",
-    bas: "bass.mp3"
-};
+Object.values(tracks).forEach(audio => {
+    audio.preload = "auto";
+});
 
-const audios = {};
-const gain = {};
-const muted = {};
-const solo = {};
+function syncPlay() {
+    const pos = tracks.ref.currentTime;
 
-const container = document.getElementById("tracks");
+    Object.values(tracks).forEach(audio => {
+        audio.currentTime = pos;
+    });
 
-// create audio + UI
-for (let key in files) {
-    const a = new Audio(files[key]);
-    a.preload = "auto";
-    audios[key] = a;
-
-    gain[key] = localStorage.getItem("vol_"+key) ?? 0.8;
-    muted[key] = false;
-    solo[key] = false;
-
-    const div = document.createElement("div");
-    div.className = "track";
-
-    div.innerHTML = `
-        <div class="row">
-            <label>${names[key]}</label>
-
-            <input type="range" min="0" max="1" step="0.01" value="${gain[key]}" id="vol_${key}">
-
-            <button class="smallbtn" id="mute_${key}">Mute</button>
-            <button class="smallbtn" id="solo_${key}">Solo</button>
-        </div>
-    `;
-
-    container.appendChild(div);
-
-    div.querySelector(`#vol_${key}`).oninput = e => {
-        gain[key] = e.target.value;
-        localStorage.setItem("vol_"+key, gain[key]);
-        applyVolume();
-    };
-
-    div.querySelector(`#mute_${key}`).onclick = () => {
-        muted[key] = !muted[key];
-        applyVolume();
-    };
-
-    div.querySelector(`#solo_${key}`).onclick = () => {
-        solo[key] = !solo[key];
-        applyVolume();
-    };
+    Promise.all(
+        Object.values(tracks).map(a => a.play())
+    );
 }
 
-function applyVolume() {
-    const anySolo = Object.values(solo).some(v => v);
-
-    for (let k in audios) {
-        let v = gain[k];
-
-        if (muted[k]) v = 0;
-
-        if (anySolo && !solo[k]) v = 0;
-
-        audios[k].volume = v;
-    }
-}
-
-// sync play
-function playAll() {
-    const t = audios.ref.currentTime || 0;
-
-    for (let k in audios) {
-        audios[k].currentTime = t;
-        audios[k].play();
-    }
-}
-
-// pause
-function pauseAll() {
-    for (let k in audios) {
-        audios[k].pause();
-    }
-}
-
-// stop
 function stopAll() {
-    for (let k in audios) {
-        audios[k].pause();
-        audios[k].currentTime = 0;
-    }
+    Object.values(tracks).forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+    });
 }
 
-document.getElementById("play").onclick = playAll;
-document.getElementById("pause").onclick = pauseAll;
-document.getElementById("stop").onclick = stopAll;
+document.getElementById("playBtn").onclick = syncPlay;
+document.getElementById("stopBtn").onclick = stopAll;
 
-// seek bar
-const seek = document.getElementById("seek");
+document.getElementById("vol_ref").oninput =
+e => tracks.ref.volume = e.target.value / 100;
 
-setInterval(() => {
-    seek.value = audios.ref.currentTime || 0;
-}, 200);
+document.getElementById("vol_sop").oninput =
+e => tracks.sop.volume = e.target.value / 100;
 
-seek.oninput = () => {
-    const t = seek.value;
-    for (let k in audios) {
-        audios[k].currentTime = t;
-    }
-};
+document.getElementById("vol_alt").oninput =
+e => tracks.alt.volume = e.target.value / 100;
 
-// init volume
-applyVolume();
+document.getElementById("vol_ten").oninput =
+e => tracks.ten.volume = e.target.value / 100;
+
+document.getElementById("vol_bas").oninput =
+e => tracks.bas.volume = e.target.value / 100;
+
+// Startwerte
+tracks.ref.volume = 0.8;
+tracks.sop.volume = 1;
+tracks.alt.volume = 1;
+tracks.ten.volume = 1;
+tracks.bas.volume = 1;
 </script>
 
 </body>
