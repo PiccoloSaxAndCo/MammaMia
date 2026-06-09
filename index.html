@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mamma Mia</title>
+<title>Chor-Probe</title>
 
 <style>
 body {
@@ -53,7 +53,7 @@ button {
 
 <body>
 
-<h1>Mamma Mia</h1>
+<h1>Chor-Probe</h1>
 
 <div class="controls">
     <button id="playBtn">▶ Start</button>
@@ -91,11 +91,11 @@ button {
 
 <script>
 const tracks = {
-    ref: new Audio("referenz.mp3"),
-    sop: new Audio("sopran.mp3"),
-    alt: new Audio("alt.mp3"),
-    ten: new Audio("tenor.mp3"),
-    bas: new Audio("bass.mp3")
+    ref: new Audio("MammaMia Ref Only.mp3"),
+    sop: new Audio("MammaMia Sopran Only.mp3"),
+    alt: new Audio("MammaMia Alt Only.mp3"),
+    ten: new Audio("MammaMia Tenor Only.mp3"),
+    bas: new Audio("MammaMia Bass Only.mp3")
 };
 
 Object.values(tracks).forEach(audio => {
@@ -125,19 +125,19 @@ document.getElementById("playBtn").onclick = syncPlay;
 document.getElementById("stopBtn").onclick = stopAll;
 
 document.getElementById("vol_ref").oninput =
-e => tracks.ref.volume = e.target.value / 60;
+e => tracks.ref.volume = e.target.value / 100;
 
 document.getElementById("vol_sop").oninput =
 e => tracks.sop.volume = e.target.value / 100;
 
 document.getElementById("vol_alt").oninput =
-e => tracks.alt.volume = e.target.value / 10;
+e => tracks.alt.volume = e.target.value / 100;
 
 document.getElementById("vol_ten").oninput =
-e => tracks.ten.volume = e.target.value / 10;
+e => tracks.ten.volume = e.target.value / 100;
 
 document.getElementById("vol_bas").oninput =
-e => tracks.bas.volume = e.target.value / 10;
+e => tracks.bas.volume = e.target.value / 100;
 
 // Startwerte
 tracks.ref.volume = 0.8;
