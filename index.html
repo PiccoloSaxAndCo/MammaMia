@@ -125,19 +125,19 @@ document.getElementById("playBtn").onclick = syncPlay;
 document.getElementById("stopBtn").onclick = stopAll;
 
 document.getElementById("vol_ref").oninput =
-e => tracks.ref.volume = e.target.value / 100;
+e => tracks.ref.volume = e.target.value / 60;
 
 document.getElementById("vol_sop").oninput =
 e => tracks.sop.volume = e.target.value / 100;
 
 document.getElementById("vol_alt").oninput =
-e => tracks.alt.volume = e.target.value / 100;
+e => tracks.alt.volume = e.target.value / 10;
 
 document.getElementById("vol_ten").oninput =
-e => tracks.ten.volume = e.target.value / 100;
+e => tracks.ten.volume = e.target.value / 10;
 
 document.getElementById("vol_bas").oninput =
-e => tracks.bas.volume = e.target.value / 100;
+e => tracks.bas.volume = e.target.value / 10;
 
 // Startwerte
 tracks.ref.volume = 0.8;
