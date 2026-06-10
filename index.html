@@ -6,6 +6,27 @@
 <title>Mamma Mia 2026</title>
 
 <style>
+
+#lyricsBox {
+  height: 250px;
+  overflow: hidden;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 15px;
+  margin-top: 20px;
+  background: #fafafa;
+  position: relative;
+}
+
+#lyricsContent {
+  position: absolute;
+  width: calc(100% - 30px);
+  white-space: pre-line;
+  line-height: 1.8;
+  font-size: 24px;
+  top: 250px; /* Start unten */
+}
+
 body {
   font-family: Arial;
   max-width: 850px;
@@ -107,6 +128,97 @@ input[type=range] {
 <div class="time" id="time">0:00 / 0:00</div>
 
 <div id="tracks"></div>
+
+<h2>Text</h2>
+
+<div id="lyricsBox">
+  <div id="lyricsContent">
+    
+
+
+Mama Mia 
+(Renate, Karin Ba., Tanja, Britta, Simone)
+I was cheated by you and I think know when
+So I made up my mind, it must come to an end
+Look at me now, will I ever learn?
+I don't know how, but I suddenly lose control
+There's a fire within my soul
+
+All
+Just one look and I can hear a bell ring
+(One more look) and I forget everything, 
+whoa
+
+Mamma mia, here I go again
+My, my, how can I resist you?
+Mamma mia, does it show again?
+My, my, just how much I've missed you?
+
+Women
+Yes, I've been brokenhearted
+Blue since the day we parted
+Why, why did I ever let you go?
+
+All 
+Mamma mia, now I really know
+My, my, I should never let you go
+
+Dancing Queen
+All: 
+Ah
+
+Karin Bo. and Manu
+Ooh: 
+You can dance, you can jive
+
+All
+Having the time of your life
+Ooh, see that girl, watch that scene
+Digging the dancing queen
+
+Karin Bo. and Manu
+Ah
+
+Waterloo
+Monday Vocal Tech Class
+My, my
+At Waterloo Napoleon did surrender
+Oh, yeah
+And I have met my destiny in quite a similar way
+
+The history book on the shelf
+Is always repeating itself
+
+All 
+Waterloo, I was defeated, you won the war
+Waterloo, promise to love you forevermore
+
+Waterloo, couldn't escape if I wanted to
+Waterloo, knowing my fate is to be with you
+
+Woah, woah, woah, woah, Waterloo
+Finally facing my Waterloo
+
+Monday Vocal Tech Class
+So how could I ever refuse?
+I feel like I win when I lose
+
+All
+Waterloo, I was defeated, you won the war
+Waterloo, promise to love you forevermore
+
+Waterloo, couldn't escape if I wanted to
+Waterloo, knowing my fate is to be with you
+
+Woah, woah, woah, woah, Waterloo
+Finally facing my Waterloo!
+
+Ooh, ooh, ooh-ooh. Waterloo
+Finally facing my Waterloo!
+
+
+  </div>
+</div>
 
 <script>
 const files = {
@@ -240,6 +352,7 @@ function applyMix() {
 
 // ---------- UI LOOP ----------
 function updateUI() {
+
   if (!playing) return;
 
   const t = ctx.currentTime - startTime;
@@ -249,6 +362,8 @@ function updateUI() {
 
   document.getElementById("time").innerText =
     format(t) + " / " + format(duration);
+
+  updateLyrics(t);
 
   requestAnimationFrame(updateUI);
 }
@@ -305,6 +420,24 @@ setTimeout(() => {
     };
   }
 }, 300);
+
+
+function updateLyrics(t) {
+
+  const box = document.getElementById("lyricsBox");
+  const content = document.getElementById("lyricsContent");
+
+  const startY = box.clientHeight;
+  const endY = -content.offsetHeight;
+
+  const progress = Math.min(t / duration, 1);
+
+  const y =
+    startY + (endY - startY) * progress;
+
+  content.style.top = y + "px";
+}
+
 </script>
 
 </body>
