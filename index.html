@@ -3,196 +3,401 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hello World Scroll Test</title>
+<title>Mamma Mia 2026</title>
 
 <style>
-body{
-  font-family:Arial,sans-serif;
-  max-width:800px;
-  margin:auto;
-  padding:20px;
+body {
+  font-family: Arial;
+  max-width: 850px;
+  margin: auto;
+  padding: 15px;
 }
 
-button{
-  padding:10px 20px;
+h1 { text-align:center; }
+
+.controls {
+  text-align:center;
+  margin-bottom:10px;
+}
+
+button {
+  padding:10px;
+  margin:5px;
   font-size:16px;
 }
 
-#lyricsBox{
-  margin-top:20px;
-  height:250px;
-  border:1px solid #ccc;
-  border-radius:10px;
-  overflow:hidden;
-  position:relative;
-  background:#fafafa;
-}
-
-#lyricsContent{
-  position:absolute;
+#seek {
   width:100%;
-  padding:20px;
-  box-sizing:border-box;
-  font-size:28px;
-  line-height:2;
-  text-align:center;
-  white-space:pre-line;
 }
 
-#time{
-  margin-top:10px;
-  font-family:monospace;
+.time {
+  text-align:center;
+  font-family: monospace;
+  margin-top:5px;
+}
+
+/* SCROLL TEXT AREA */
+#scrollContainer {
+  position: relative;
+  width: 100%;
+  height: 70px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  margin: 15px 0;
+  background: #fafafa;
+}
+
+#scrollText {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 40px;
+  font-weight: bold;
+  top: 50%;
+  left: 0;
+  transform: translate(0,-50%);
+  color: #333;
+}
+
+/* Track UI */
+.track {
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:10px;
+  margin:10px 0;
+}
+
+.track.ref {
+  background:#FFCCBC;
+  border-color:#FF8A65;
+}
+
+.track.sop { background:#E3F2FD; }
+.track.alt { background:#E8F5E9; }
+.track.ten { background:#FFF9C4; }
+.track.bas { background:#F5F5F5; }
+
+.row {
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+label {
+  width:90px;
+  font-weight:bold;
+}
+
+input[type=range] {
+  flex:1;
+}
+
+.muteBtn {
+  padding:5px 8px;
+  font-size:12px;
+  border-radius:5px;
+  border:1px solid #ccc;
+  cursor:pointer;
+}
+
+.muteBtn.active {
+  background:#e74c3c;
+  color:white;
+  border-color:#e74c3c;
+}
+
+.volDisplay {
+  width:55px;
+  font-size:12px;
+  text-align:right;
 }
 </style>
 </head>
 
 <body>
 
-<h1>Hello World Test</h1>
+<h1>Mamma Mia 2026</h1>
 
-<button id="play">▶ Play</button>
-
-<div id="time">0:00 / 0:00</div>
-
-<div id="lyricsBox">
-  <div id="lyricsContent">
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-Hello world
-
-  </div>
+<div class="controls">
+  <button id="play">▶ Play</button>
+  <button id="pause">⏸ Pause</button>
+  <button id="stop">■ Stop</button>
 </div>
 
-<script>
+<input type="range" id="seek" min="0" max="1000" value="0">
+<div class="time" id="time">0:00 / 0:00</div>
 
+<!-- SCROLL TEXT -->
+<div id="scrollContainer">
+  <div id="scrollText"></div>
+</div>
+
+<div id="tracks"></div>
+
+<script>
+// =====================
+// AUDIO FILES
+// =====================
+const files = {
+  ref: "referenz.mp3",
+  sop: "sopran.mp3",
+  alt: "alt.mp3",
+  ten: "tenor.mp3",
+  bas: "bass.mp3"
+};
+
+const names = {
+  ref: "Ref.Track",
+  sop: "Sopran",
+  alt: "Alt",
+  ten: "Tenor",
+  bas: "Bass"
+};
+
+// 👉 HIER TEXT ÄNDERN
+const scrollTextContent = "HELLO WORLD";
+
+// =====================
 const ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-let buffer;
-let source;
+let buffers = {};
+let gainNodes = {};
+let sources = {};
 
-let duration = 0;
+let state = {};
 let startTime = 0;
+let offset = 0;
 let playing = false;
+let duration = 0;
 
-async function loadAudio() {
+// =====================
+// UI BUILD
+// =====================
+const container = document.getElementById("tracks");
 
-  const res = await fetch("audio.mp3");
-  const arr = await res.arrayBuffer();
+for (let k in files) {
 
-  buffer = await ctx.decodeAudioData(arr);
+  const defaultVol = (k === "ref") ? 0.25 : 0.8;
 
-  duration = buffer.duration;
+  state[k] = { volume: defaultVol, mute: false };
+
+  const div = document.createElement("div");
+
+  let cls = "track " + k;
+  if (k === "ref") cls += " ref";
+
+  div.className = cls;
+
+  div.innerHTML = `
+    <div class="row">
+      <label>${names[k]}</label>
+
+      <input type="range"
+             min="0" max="1" step="0.01"
+             value="${defaultVol}"
+             id="vol_${k}">
+
+      <div class="volDisplay" id="disp_${k}">
+        ${Math.round(defaultVol * 100)}%
+      </div>
+
+      <button class="muteBtn" id="mute_${k}">Mute</button>
+    </div>
+  `;
+
+  container.appendChild(div);
 }
 
-function playAudio() {
+// =====================
+// AUDIO LOAD
+// =====================
+async function loadAll() {
+  for (let k in files) {
+    const res = await fetch(files[k]);
+    const arr = await res.arrayBuffer();
+    buffers[k] = await ctx.decodeAudioData(arr);
+  }
 
-  source = ctx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(ctx.destination);
+  duration = buffers.ref.duration;
 
-  startTime = ctx.currentTime;
+  document.getElementById("scrollText").innerText = scrollTextContent;
 
-  source.start();
+  requestAnimationFrame(() => updateScroll(0));
+}
+
+// =====================
+// PLAY
+// =====================
+function playAll() {
+  stopAll();
+
+  startTime = ctx.currentTime - offset;
+
+  for (let k in buffers) {
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+
+    source.buffer = buffers[k];
+
+    gain.gain.value = state[k].mute ? 0 : state[k].volume;
+
+    source.connect(gain).connect(ctx.destination);
+
+    source.start(0, offset);
+
+    sources[k] = source;
+    gainNodes[k] = gain;
+  }
 
   playing = true;
-
   updateUI();
 }
 
-function format(t){
-
-  const m = Math.floor(t/60);
-
-  const s = Math.floor(t%60)
-    .toString()
-    .padStart(2,"0");
-
-  return `${m}:${s}`;
+// =====================
+// STOP
+// =====================
+function stopAll() {
+  for (let k in sources) {
+    try { sources[k].stop(); } catch(e) {}
+  }
+  sources = {};
+  playing = false;
 }
 
-function updateLyrics(t){
-
-  const box =
-    document.getElementById("lyricsBox");
-
-  const content =
-    document.getElementById("lyricsContent");
-
-  const maxScroll =
-    content.scrollHeight - box.clientHeight;
-
-  const progress =
-    Math.min(t / duration, 1);
-
-  content.style.top =
-    -(maxScroll * progress) + "px";
+// =====================
+// PAUSE
+// =====================
+function pauseAll() {
+  offset = ctx.currentTime - startTime;
+  stopAll();
 }
 
-function updateUI(){
+// =====================
+// MIX
+// =====================
+function applyMix() {
+  for (let k in gainNodes) {
+    if (!gainNodes[k]) continue;
+    gainNodes[k].gain.value =
+      state[k].mute ? 0 : state[k].volume;
+  }
+}
 
-  if(!playing) return;
+// =====================
+// SCROLL SYNC
+// =====================
+function updateScroll(currentTime) {
 
-  const t =
-    ctx.currentTime - startTime;
+  if (!duration) return;
+
+  const text = document.getElementById("scrollText");
+  const container = document.getElementById("scrollContainer");
+
+  const progress = Math.min(Math.max(currentTime / duration, 0), 1);
+
+  const startX = container.clientWidth;
+  const endX = -text.offsetWidth;
+
+  const x = startX + (endX - startX) * progress;
+
+  text.style.transform = `translate(${x}px,-50%)`;
+}
+
+// =====================
+// UI LOOP
+// =====================
+function updateUI() {
+
+  if (!playing) return;
+
+  const t = ctx.currentTime - startTime;
+
+  updateScroll(t);
+
+  document.getElementById("seek").value =
+    (t / duration) * 1000;
 
   document.getElementById("time").innerText =
     format(t) + " / " + format(duration);
 
-  updateLyrics(t);
-
-  if(t < duration){
-    requestAnimationFrame(updateUI);
+  if (t >= duration) {
+    stopAll();
+    offset = 0;
+    updateScroll(duration);
+    return;
   }
+
+  requestAnimationFrame(updateUI);
 }
 
-document.getElementById("play").onclick =
-async () => {
+// =====================
+// FORMAT
+// =====================
+function format(t) {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60).toString().padStart(2,"0");
+  return `${m}:${s}`;
+}
 
-  await ctx.resume();
+// =====================
+// SEEK
+// =====================
+document.getElementById("seek").oninput = (e) => {
 
-  if(!buffer){
-    await loadAudio();
-  }
+  offset = (e.target.value / 1000) * duration;
 
-  playAudio();
+  updateScroll(offset);
+
+  if (playing) playAll();
 };
+
+// =====================
+// CONTROLS
+// =====================
+document.getElementById("play").onclick = async () => {
+  await ctx.resume();
+  await loadAll();
+  playAll();
+};
+
+document.getElementById("pause").onclick = pauseAll;
+
+document.getElementById("stop").onclick = () => {
+
+  offset = 0;
+  stopAll();
+
+  document.getElementById("seek").value = 0;
+  document.getElementById("time").innerText =
+    "0:00 / 0:00";
+
+  updateScroll(0);
+};
+
+// =====================
+// INPUT EVENTS
+// =====================
+setTimeout(() => {
+  for (let k in files) {
+
+    document.getElementById("vol_" + k).oninput = (e) => {
+      const v = parseFloat(e.target.value);
+
+      state[k].volume = v;
+
+      document.getElementById("disp_" + k).innerText =
+        Math.round(v * 100) + "%";
+
+      applyMix();
+    };
+
+    document.getElementById("mute_" + k).onclick = (e) => {
+      state[k].mute = !state[k].mute;
+      e.target.classList.toggle("active");
+      applyMix();
+    };
+  }
+}, 300);
 
 </script>
 
