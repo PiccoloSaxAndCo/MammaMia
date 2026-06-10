@@ -40,7 +40,7 @@ button {
 #scrollContainer {
   position: relative;
   width: 100%;
-  height: 70px;
+  height: 120px; /* höher für 2 Zeilen */
   overflow: hidden;
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -48,17 +48,25 @@ button {
   background: #fafafa;
 }
 
-#scrollText {
+.scrollLine {
   position: absolute;
   white-space: nowrap;
-//  font-size: 40px;
-  font-size: 20px;
-//  font-weight: bold;
-  font-weight: normal;
-  top: 50%;
+  font-size: 32px;
+  font-weight: bold;
   left: 0;
-  transform: translate(0,-50%);
+  transform: translateY(-50%);
   color: #333;
+}
+
+/* Positionierung der 2 Zeilen */
+#scrollText1 {
+  top: 35%;
+}
+
+#scrollText2 {
+  top: 70%;
+  font-size: 28px;
+  opacity: 0.75;
 }
 
 /* Track UI */
@@ -131,7 +139,10 @@ input[type=range] {
 
 <!-- SCROLL TEXT -->
 <div id="scrollContainer">
-  <div id="scrollText"></div>
+
+  <div class="scrollLine" id="scrollText1"></div>
+  <div class="scrollLine" id="scrollText2"></div>
+
 </div>
 
 <div id="tracks"></div>
@@ -157,7 +168,8 @@ const names = {
 };
 
 // 👉 HIER TEXT ÄNDERN
-const scrollTextContent = "(Ren, KaBa., Ta, Brit, Sim). I was cheated by you and I think you know when. So I made up my mind, it must come to an end. Look at me now, will I ever learn?. I don't know how, but I suddenly lose control. There's a fire within my soul.. (All). Just one look and I can hear a bell ring. One more look and I forget everything,.  whoa..  Mamma mia, here I go again. My, my, how can I resist you?. Mamma mia, does it show again?. My, my, just how much I've missed you?..  (Women). Yes, I've been brokenhearted. Blue since the day we parted. Why, why did I ever let you go?..  (All).  Mamma mia, now I really know. My, my, I should never let you go..  Dancing Queen. (All).  Ah..  (KaBo. & Man). Ooh:.  You can dance, you can jive..  (All). Having the time of your life. Ooh, see that girl, watch that scene. Digging the dancing queen..  (KaBo. & Man). Ah..  Waterloo. (MoVTClass). My, my. At Waterloo Napoleon did surrender. Oh, yeah. And I have met my destiny in quite a similar way..  The history book on the shelf. Is always repeating itself..  (All).  Waterloo, I was defeated, you won the war. Waterloo, promise to love you forevermore..  Waterloo, couldn't escape if I wanted to. Waterloo, knowing my fate is to be with you..  Woah, woah, woah, woah, Waterloo.  Finally facing my Waterloo..  (MoVTClass). So how could I ever refuse?. I feel like I win when I lose..   (All). Waterloo, I was defeated, you won the war. Waterloo, promise to love you forevermore..  Waterloo, couldn't escape if I wanted to. Waterloo, knowing my fate is to be with you..  Woah, woah, woah, woah, Waterloo. Finally facing my Waterloo!..  Ooh, ooh, ooh-ooh. Waterloo. Finally facing my Waterloo!";
+const scrollText1Content = "(Ren, KaBa., Ta, Brit, Sim). I was cheated by you and I think you know when. So I made up my mind, it must come to an end. Look at me now, will I ever learn?. I don't know how, but I suddenly lose control. There's a fire within my soul.. (All). Just one look and I can hear a bell ring. One more look and I forget everything,.  whoa..  Mamma mia, here I go again. My, my, how can I resist you?. Mamma mia, does it show again?. My, my, just how much I've missed you?..  (Women). Yes, I've been brokenhearted. Blue since the day we parted. Why, why did I ever let you go?..  (All).  Mamma mia, now I really know. My, my, I should never let you go..  Dancing Queen. (All).  Ah..  (KaBo. & Man). Ooh:.  You can dance, you can jive..  (All). Having the time of your life. Ooh, see that girl, watch that scene. Digging the dancing queen..  (KaBo. & Man). Ah..  Waterloo. (MoVTClass). My, my. At Waterloo Napoleon did surrender. Oh, yeah. And I have met my destiny in quite a similar way..  The history book on the shelf. Is always repeating itself..  (All).  Waterloo, I was defeated, you won the war. Waterloo, promise to love you forevermore..  Waterloo, couldn't escape if I wanted to. Waterloo, knowing my fate is to be with you..  Woah, woah, woah, woah, Waterloo.  Finally facing my Waterloo..  (MoVTClass). So how could I ever refuse?. I feel like I win when I lose..   (All). Waterloo, I was defeated, you won the war. Waterloo, promise to love you forevermore..  Waterloo, couldn't escape if I wanted to. Waterloo, knowing my fate is to be with you..  Woah, woah, woah, woah, Waterloo. Finally facing my Waterloo!..  Ooh, ooh, ooh-ooh. Waterloo. Finally facing my Waterloo!";
+const scrollText2Content = "by you and I think you know when. So I made up my mind, it must come to an end. Look at me now, will I ever learn?. I don't know how, but I suddenly lose control. There's a fire within my soul.. (All). Just one look and I can hear a bell ring. One more look and I forget everything,.  whoa..  Mamma mia, here I go again. My, my, how can I resist you?. Mamma mia, does it show again?. My, my, just how much I've missed you?..  (Women). Yes, I've been brokenhearted. Blue since the day we parted. Why, why did I ever let you go?..  (All).  Mamma mia, now I really know. My, my, I should never let you go..  Dancing Queen. (All).  Ah..  (KaBo. & Man). Ooh:.  You can dance, you can jive..  (All). Having the time of your life. Ooh, see that girl, watch that scene. Digging the dancing queen..  (KaBo. & Man). Ah..  Waterloo. (MoVTClass). My, my. At Waterloo Napoleon did surrender. Oh, yeah. And I have met my destiny in quite a similar way..  The history book on the shelf. Is always repeating itself..  (All).  Waterloo, I was defeated, you won the war. Waterloo, promise to love you forevermore..  Waterloo, couldn't escape if I wanted to. Waterloo, knowing my fate is to be with you..  Woah, woah, woah, woah, Waterloo.  Finally facing my Waterloo..  (MoVTClass). So how could I ever refuse?. I feel like I win when I lose..   (All). Waterloo, I was defeated, you won the war. Waterloo, promise to love you forevermore..  Waterloo, couldn't escape if I wanted to. Waterloo, knowing my fate is to be with you..  Woah, woah, woah, woah, Waterloo. Finally facing my Waterloo!..  Ooh, ooh, ooh-ooh. Waterloo. Finally facing my Waterloo!";
 
 // =====================
 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -222,7 +234,8 @@ async function loadAll() {
 
   duration = buffers.ref.duration;
 
-  document.getElementById("scrollText").innerText = scrollTextContent;
+document.getElementById("scrollText1").innerText = scrollText1Content;
+document.getElementById("scrollText2").innerText = scrollText2Content;
 
   requestAnimationFrame(() => updateScroll(0));
 }
@@ -292,17 +305,23 @@ function updateScroll(currentTime) {
 
   if (!duration) return;
 
-  const text = document.getElementById("scrollText");
   const container = document.getElementById("scrollContainer");
 
   const progress = Math.min(Math.max(currentTime / duration, 0), 1);
 
   const startX = container.clientWidth;
-  const endX = -text.offsetWidth;
 
-  const x = startX + (endX - startX) * progress;
+  const text1 = document.getElementById("scrollText1");
+  const text2 = document.getElementById("scrollText2");
 
-  text.style.transform = `translate(${x}px,-50%)`;
+  const endX1 = -text1.offsetWidth;
+  const endX2 = -text2.offsetWidth;
+
+  const x1 = startX + (endX1 - startX) * progress;
+  const x2 = startX + (endX2 - startX) * progress;
+
+  text1.style.transform = `translate(${x1}px,-50%)`;
+  text2.style.transform = `translate(${x2}px,-50%)`;
 }
 
 // =====================
