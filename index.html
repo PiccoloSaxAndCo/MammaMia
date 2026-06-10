@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mamma Mia 2026</title>
+
+<style>
+body {
+  font-family: Arial;
+  max-width: 850px;
+  margin: auto;
+  padding: 15px;
+}
+
+h1 { text-align:center; }
+
+.controls {
+  text-align:center;
+  margin-bottom:10px;
+}
+
+button {
+  padding:10px;
+  margin:5px;
+  font-size:16px;
+}
+
+#seek {
+  width:100%;
+}
+
+.time {
+  text-align:center;
+  font-family: monospace;
+  margin-top:5px;
+}
+
+/* Base track */
+.track {
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:10px;
+  margin:10px 0;
+}
+
+/* Reference highlight */
+.track.ref {
+  background:#FFCCBC;
+  border-color:#FF8A65;
+}
+
+/* Color coding */
+.track.sop { background:#E3F2FD; }  /* blue */
+.track.alt { background:#E8F5E9; }  /* green */
+.track.ten { background:#FFF9C4; }  /* yellow */
+.track.bas { background:#F5F5F5; }  /* grey */
+
+.row {
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+label {
+  width:90px;
+  font-weight:bold;
+}
+
+input[type=range] {
+  flex:1;
+}
+
+.muteBtn {
+  padding:5px 8px;
+  font-size:12px;
+  border-radius:5px;
+  border:1px solid #ccc;
+  cursor:pointer;
+}
+
+.muteBtn.active {
+  background:#e74c3c;
+  color:white;
+  border-color:#e74c3c;
+}
+
+.volDisplay {
+  width:55px;
+  font-size:12px;
+  text-align:right;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Mamma Mia 2026</h1>
+
+<div class="controls">
+  <button id="play">▶ Play</button>
+  <button id="pause">⏸ Pause</button>
+  <button id="stop">■ Stop</button>
+</div>
+
+<input type="range" id="seek" min="0" max="1000" value="0">
+<div class="time" id="time">0:00 / 0:00</div>
+
+<div id="tracks"></div>
+
+<script>
+const files = {
+  ref: "referenz.mp3",
+  sop: "sopran.mp3",
+  alt: "alt.mp3",
+  ten: "tenor.mp3",
+  bas: "bass.mp3"
+};
+
+const names = {
+  ref: "Ref.Track",
+  sop: "Sopran",
+  alt: "Alt",
+  ten: "Tenor",
+  bas: "Bass"
+};
+
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+let buffers = {};
+let gainNodes = {};
+let sources = {};
+
+let state = {};
+let startTime = 0;
+let offset = 0;
+let playing = false;
+let duration = 0;
+
+// ---------- UI BUILD ----------
+const container = document.getElementById("tracks");
+
+for (let k in files) {
+
+  const defaultVol = (k === "ref") ? 0.25 : 0.8;
+
+  state[k] = {
+    volume: defaultVol,
+    mute: false
+  };
+
+  const div = document.createElement("div");
+
+  // 🎨 class assignment
+  let cls = "track " + k;
+  if (k === "ref") cls += " ref";
+
+  div.className = cls;
+
+  div.innerHTML = `
+    <div class="row">
+      <label>${names[k]}</label>
+
+      <input type="range"
+             min="0" max="1" step="0.01"
+             value="${defaultVol}"
+             id="vol_${k}">
+
+      <div class="volDisplay" id="disp_${k}">
+        ${Math.round(defaultVol * 100)}%
+      </div>
+
+      <button class="muteBtn" id="mute_${k}">Mute</button>
+    </div>
+  `;
+
+  container.appendChild(div);
+}
+
+// ---------- LOAD AUDIO ----------
+async function loadAll() {
+  for (let k in files) {
+    const res = await fetch(files[k]);
+    const arr = await res.arrayBuffer();
+    buffers[k] = await ctx.decodeAudioData(arr);
+  }
+
+  duration = buffers.ref.duration;
+}
+
+// ---------- PLAY ----------
+function playAll() {
+  stopAll();
+
+  startTime = ctx.currentTime - offset;
+
+  for (let k in buffers) {
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+
+    source.buffer = buffers[k];
+
+    gain.gain.value = state[k].mute ? 0 : state[k].volume;
+
+    source.connect(gain).connect(ctx.destination);
+
+    source.start(0, offset);
+
+    sources[k] = source;
+    gainNodes[k] = gain;
+  }
+
+  playing = true;
+  updateUI();
+}
+
+// ---------- STOP ----------
+function stopAll() {
+  for (let k in sources) {
+    try { sources[k].stop(); } catch(e) {}
+  }
+  sources = {};
+  playing = false;
+}
+
+// ---------- PAUSE ----------
+function pauseAll() {
+  offset = ctx.currentTime - startTime;
+  stopAll();
+}
+
+// ---------- APPLY MIX ----------
+function applyMix() {
+  for (let k in gainNodes) {
+    if (!gainNodes[k]) continue;
+    gainNodes[k].gain.value =
+      state[k].mute ? 0 : state[k].volume;
+  }
+}
+
+// ---------- UI LOOP ----------
+function updateUI() {
+  if (!playing) return;
+
+  const t = ctx.currentTime - startTime;
+
+  document.getElementById("seek").value =
+    (t / duration) * 1000;
+
+  document.getElementById("time").innerText =
+    format(t) + " / " + format(duration);
+
+  requestAnimationFrame(updateUI);
+}
+
+// ---------- FORMAT ----------
+function format(t) {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60).toString().padStart(2,"0");
+  return `${m}:${s}`;
+}
+
+// ---------- SEEK ----------
+document.getElementById("seek").oninput = (e) => {
+  offset = (e.target.value / 1000) * duration;
+
+  if (playing) playAll();
+};
+
+// ---------- CONTROLS ----------
+document.getElementById("play").onclick = async () => {
+  await ctx.resume();
+  await loadAll();
+  playAll();
+};
+
+document.getElementById("pause").onclick = pauseAll;
+
+document.getElementById("stop").onclick = () => {
+  offset = 0;
+  stopAll();
+  document.getElementById("seek").value = 0;
+  document.getElementById("time").innerText = "0:00 / 0:00";
+};
+
+// ---------- INPUT EVENTS ----------
+setTimeout(() => {
+  for (let k in files) {
+
+    document.getElementById("vol_" + k).oninput = (e) => {
+      const v = parseFloat(e.target.value);
+
+      state[k].volume = v;
+
+      document.getElementById("disp_" + k).innerText =
+        Math.round(v * 100) + "%";
+
+      applyMix();
+    };
+
+    document.getElementById("mute_" + k).onclick = (e) => {
+      state[k].mute = !state[k].mute;
+      e.target.classList.toggle("active");
+      applyMix();
+    };
+  }
+}, 300);
+</script>
+
+</body>
+</html>
